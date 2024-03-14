@@ -78,7 +78,7 @@ def random_node_gen():
     return (x, y)
 
 theta = 30
-step_size = 0.5
+step_size = 1
 
 def is_free(x, y):
     return all(canvas[y, x] == free_space_color) or all(canvas[y, x] == (0, 255, 0)) or all(canvas[y, x] == (0, 0, 255))
@@ -97,40 +97,40 @@ def is_free(x, y):
 #             neighbors.append(((nx, ny), cost))
 #     return neighbors
 
-# def get_neighbors(node):
-#     x, y = node
-#     neighbors = []
-#     directions = [-2, -1, 0, 1, 2]
-#     for th in directions:
-#         rad = np.deg2rad(th * theta)
-#         nx = x + step_size * np.sin(rad)
-#         ny = y + step_size * np.cos(rad)
-#         # ny = abs(500 - ny)
-#         if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(int(nx), int(ny)):
-#             cost = 1
-#             neighbors.append(((int(nx), int(ny)), cost))
-#     return neighbors
-
 def get_neighbors(node):
     x, y = node
     neighbors = []
-    # Define step sizes for movement: forward, backward, left, right
-    step_sizes = [step_size, -step_size]
-    # Define angular changes: straight, and potential turns
-    angle_changes = [0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180]
-
-    for step in step_sizes:
-        for angle_change in angle_changes:
-            rad = np.deg2rad(angle_change)  # Convert angle change to radians
-            # Calculate new x and y based on angle and step size
-            nx = x + step * np.sin(rad)
-            ny = y + step * np.cos(rad)
-
-            if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(int(nx), int(ny)):
-                cost = 1  # Assuming uniform cost for simplicity
-                neighbors.append(((int(nx), int(ny)), cost))
-
+    directions = [0, 1, 2 , 10, 11]
+    for th in directions:
+        rad = np.deg2rad(th*theta)
+        nx = x + (step_size * np.sin(rad))
+        ny = y + (step_size * np.cos(rad))
+        # ny = abs(500 - ny)
+        if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(int(nx), int(ny)):
+            cost = 1
+            neighbors.append(((int(nx), int(ny)), cost))
     return neighbors
+
+# def get_neighbors(node):
+#     x, y = node
+#     neighbors = []
+#     # Define step sizes for movement: forward, backward, left, right
+#     step_sizes = [step_size, -step_size]
+#     # Define angular changes: straight, and potential turns
+#     angle_changes = [0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180]
+
+#     for step in step_sizes:
+#         for angle_change in angle_changes:
+#             rad = np.deg2rad(angle_change)  # Convert angle change to radians
+#             # Calculate new x and y based on angle and step size
+#             nx = x + step * np.sin(rad)
+#             ny = y + step * np.cos(rad)
+
+#             if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(int(nx), int(ny)):
+#                 cost = 1  # Assuming uniform cost for simplicity
+#                 neighbors.append(((int(nx), int(ny)), cost))
+
+#     return neighbors
 
 
 D = 1.0  
@@ -145,11 +145,10 @@ def a_star(start, goal):
     pq = PriorityQueue()
     pq.put((0, start))
     came_from = {start: None}
-    cost_to_goal = octile_distance(start[0], start[1], goal[0], goal[1])
-    # cost_to_goal = ((goal[0] - start[0])**2 + (goal[1] - start[1])**2)**0.5
-
-
+    # cost_to_goal = octile_distance(start[0], start[1], goal[0], goal[1])
+    cost_to_goal = ((goal[0] - start[0])**2 + (goal[1] - start[1])**2)**0.5
     # cost_to_goal = abs(goal[0] - start[0]) + abs(goal[1] - start[1])
+    # cost_to_goal = 0
     cost_so_far = {start: cost_to_goal}
     count =0
 
@@ -183,23 +182,23 @@ def a_star(start, goal):
                     out.write(canvas)
     return came_from, cost_so_far
 
-# def reconstruct_path(came_from, start, goal):
-#     current = goal
-#     path = []
-#     count = 0
-#     while current != start:
-#         path.append(current)
-#         cv2.circle(canvas, current, 2, (255, 255, 255), -1)
-#         if count%30 == 0:
-#             cv2.imshow('A*', canvas)
-#             cv2.waitKey(1)            
-#             out.write(canvas)
-#         count += 1
-#         current = came_from[current]
-#     cv2.destroyAllWindows()
-#     path.append(start)
-#     path.reverse()
-#     return path
+def reconstruct_path(came_from, start, goal):
+    current = goal
+    path = []
+    count = 0
+    while current != start:
+        path.append(current)
+        cv2.circle(canvas, current, 2, (255, 255, 255), -1)
+        if count%30 == 0:
+            cv2.imshow('A*', canvas)
+            cv2.waitKey(1)            
+            out.write(canvas)
+        count += 1
+        current = came_from[current]
+    cv2.destroyAllWindows()
+    path.append(start)
+    path.reverse()
+    return path
 
 def visualize_path(path):
     count = 0
@@ -263,8 +262,10 @@ else:
     cv2.circle(canvas, goal_node, 5, (0, 255, 0), -1)
     
     came_from, cost_so_far = a_star(start_node, goal_node)
-    # path = reconstruct_path(came_from, start_node, goal_node)
-    # visualize_path(path)
+    cv2.imshow('A*', canvas)
+    cv2.waitKey(0)
+    path = reconstruct_path(came_from, start_node, goal_node)
+    visualize_path(path)
 
 end_time = time.time()
 execution_time = end_time - start_time

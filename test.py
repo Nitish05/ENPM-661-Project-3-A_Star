@@ -1,38 +1,86 @@
-# Constants
-WIDTH = 600  # Width of the map
-HEIGHT = 250  # Height of the map
-THETA_STEPS = 30  # Degrees
+import cv2
+import numpy as np
+from queue import PriorityQueue
+import time
+import random
 
-# Matrix dimensions
-x_dim = int(WIDTH / 0.5)  # 1200
-y_dim = int(HEIGHT / 0.5)  # 500
-theta_dim = int(360 / THETA_STEPS)  # 12
+canvas_height = 501
+canvas_width = 1201
+free_space_color = (255, 255, 255)
+obstacle_color = (0, 0, 0)
+canvas = np.ones((canvas_height, canvas_width, 3), dtype="uint8") * 255  
 
-# Initialize the visited matrix with zeros
-V = [[[0 for _ in range(theta_dim)] for _ in range(x_dim)] for _ in range(y_dim)]
+def draw_rectangle(center, width, height, color):
+    top_left = (int(center[0] - width/2), int(center[1] - height/2))
+    bottom_right = (int(center[0] + width/2), int(center[1] + height/2))
+    cv2.rectangle(canvas, top_left, bottom_right, color, -1)
 
-def mark_visited(x, y, theta):
-    # Convert to discrete indices
-    x_index = int(x * 2)
-    y_index = int(y * 2)
-    theta_index = int(theta / THETA_STEPS)
+clearance = [
+    ((137.5, 200), 85, 410),
+    ((312.3, 300), 85, 410),
+    ((1000, 87.5), 210, 85),
+    ((1000, 412.5), 210, 85),
+    ((1060, 250), 90, 240),
+]
 
-    # Mark as visited
-    V[y_index][x_index][theta_index] = 1
+obstacle = [
+    ((137.5, 200), 75, 400),
+    ((312.3, 300), 75, 400),
+    ((1000, 87.5), 200, 75),
+    ((1000, 412.5), 200, 75),
+    ((1060, 250),80, 250),
+]
 
-def is_visited(x, y, theta):
-    # Convert to discrete indices
-    x_index = int(x * 2)
-    y_index = int(y * 2)
-    theta_index = int(theta / THETA_STEPS)
+for center, width, height in clearance:
+    draw_rectangle(center, width, height, (127, 127, 127)) 
 
-    # Return visited status
-    return V[y_index][x_index][theta_index] == 1
+for center, width, height in obstacle:
+    draw_rectangle(center, width, height, (0, 0, 0))
 
-# Example usage
-mark_visited(3.2, 4.7, 0)
-mark_visited(10.2, 8.8, 30)
-if not is_visited(10.1, 8.9, 30):  # This will return True since it's considered visited
-    print("Node is not a duplicate.")
-else:
-    print("Node is a duplicate.")
+center = (650, 250)
+side_length = 150
+radius_c = (side_length / (2 * np.sin(np.pi / 6))) + 5
+
+hex_c = []
+for i in range(6):
+    x_c = int(center[0] + radius_c * np.cos(i * 2 * np.pi / 6))
+    y_c = int(center[1] + radius_c * np.sin(i * 2 * np.pi / 6))
+    hex_c.append((x_c, y_c))
+    
+radius = (side_length / (2 * np.sin(np.pi / 6)))
+hex = []
+for j in range(6):
+    x = int(center[0] + radius * np.cos(j * 2 * np.pi / 6))
+    y = int(center[1] + radius * np.sin(j * 2 * np.pi / 6))
+    hex.append((x, y))
+
+pts_c = np.array(hex_c, np.int32)
+pts_c = pts_c.reshape((-1, 1, 2))
+color_c = (127, 127, 127)
+pts = np.array(hex, np.int32)
+pts = pts.reshape((-1, 1, 2))
+color = (0, 0, 0)
+
+
+cv2.fillPoly(canvas, [pts_c], color_c)
+cv2.fillPoly(canvas, [pts], color)
+
+x =650
+y = 250
+y = abs(canvas_height - y)
+w = 10
+l = 10
+theta = 30
+theta = np.deg2rad(theta)
+canvas[y,x] = (0,0,255)
+
+direction = [ -2, -1, 0, 1, 2]
+
+for i in  direction:
+    X = x + l*np.sin(theta * i)
+    Y = y + l*np.cos(theta * i)
+    Y = abs(canvas_height - Y)
+    cv2.line(canvas, (x, y), (int(X), int(Y)), (0, 0, 255), 2)
+
+cv2.imshow("Canvas", canvas)
+cv2.waitKey(0)
