@@ -16,9 +16,9 @@ clearance_color = (127, 127, 127)
 obstacle_color = (0, 0, 0)
 free_space_color = (255, 255, 255)
 theta_list = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
-step_size = 3
+step_size = 5
 clearance_distance = 5
-threshold = 1.5
+threshold = 3
 robo_radius = 5
 
 # Initialize a white canvas
@@ -200,9 +200,7 @@ def a_star(start, goal):
                 canvas_array[next_node[0], next_node[1], int(theta_index)] = np.inf
                 came_from[next_node] = current_node[0]
                 count += 1
-                if count%1200 == 0:
-                    # cv2.imshow('A*', canvas)
-                    # cv2.waitKey(1)                    
+                if count%3000 == 0:                    
                     out.write(canvas)
     return came_from, cost_so_far, goal
 
@@ -241,9 +239,11 @@ def reconstruct_path(came_from, start, goal):
 
 def visualize_path(path):
     count = 0
-    for node in path:
-        x, y, t = node
-        cv2.circle(canvas, (x, y), 2, (0, 0, 255), -1) 
+    for i in range(len(path)-1):
+        x, y, t = path[i]
+        xn, yn, tn = path[i+1]
+        # cv2.circle(canvas, (x, y), 2, (0, 0, 255), -1)
+        cv2.arrowedLine(canvas, (x, y), (xn,yn), (0, 0, 255), 1)
         count += 1
         if count%15 == 0:
             # cv2.imshow('A*', canvas)
