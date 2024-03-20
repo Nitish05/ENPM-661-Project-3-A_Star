@@ -1,214 +1,146 @@
+
+
+# Import necessary libraries
 import cv2
 import numpy as np
 from queue import PriorityQueue
 import time
 import random
 
+# Canvas dimensions
 canvas_height = 501
 canvas_width = 1201
-free_space_color = (255, 255, 255)
+
+# Define the colors
+clearance_color = (127, 127, 127)
 obstacle_color = (0, 0, 0)
-canvas = np.ones((canvas_height, canvas_width, 3), dtype="uint8") * 255  
+free_space_color = (255, 255, 255)
+threshold = 1.5
 
-def draw_rectangle(center, width, height, color):
-    top_left = (int(center[0] - width/2), int(center[1] - height/2))
-    bottom_right = (int(center[0] + width/2), int(center[1] + height/2))
-    cv2.rectangle(canvas, top_left, bottom_right, color, -1)
+# Initialize a white canvas
+canvas = np.ones((canvas_height, canvas_width, 3), dtype="uint8") * 255
 
-clearance = [
-    ((137.5, 200), 85, 410),
-    ((312.3, 300), 85, 410),
-    ((1000, 87.5), 210, 85),
-    ((1000, 412.5), 210, 85),
-    ((1060, 250), 90, 240),
-]
+# Define obstacles using half plane model
+def obstacles(node):
+    x, y = node
+    Hex_center = (650, 250)
+    Xc, Yc = Hex_center
+    y = abs(y - canvas_height)
+    side_length = 150
+    R = np.cos(np.pi / 6) * side_length
+    obstacles = [
+        (x >= 100 and x <= 175 and y >= 100 and y <= 500), 
+        (x >= 275 and x <= 350 and y >= 0 and y <= 400),
+        (x >= 900 and x <= 1100 and y >= 50 and y <= 125),
+        (x >= 900 and x <= 1100 and y >= 375 and y <= 450),
+        (x >= 1020 and x <= 1100 and y >= 50 and y <= 450),
+        (x >= Xc - R and x <= Xc + R and y <= ((np.pi/6)*(x-(Xc-R)))+325 and y <= -((np.pi/6)*(x-(Xc+R)))+325 and y >= -((np.pi/6)*(x-(Xc-R)))+175 and y >= ((np.pi/6)*(x-(Xc+R)))+175),
+        
+    ]
+    return any(obstacles)
 
-obstacle = [
-    ((137.5, 200), 75, 400),
-    ((312.3, 300), 75, 400),
-    ((1000, 87.5), 200, 75),
-    ((1000, 412.5), 200, 75),
-    ((1060, 250),80, 250),
-]
-
-for center, width, height in clearance:
-    draw_rectangle(center, width, height, (127, 127, 127)) 
-
-for center, width, height in obstacle:
-    draw_rectangle(center, width, height, (0, 0, 0))
-
-center = (650, 250)
-side_length = 150
-radius_c = (side_length / (2 * np.sin(np.pi / 6))) + 5
-
-hex_c = []
-for i in range(6):
-    x_c = int(center[0] + radius_c * np.cos(i * 2 * np.pi / 6))
-    y_c = int(center[1] + radius_c * np.sin(i * 2 * np.pi / 6))
-    hex_c.append((x_c, y_c))
-    
-radius = (side_length / (2 * np.sin(np.pi / 6)))
-hex = []
-for j in range(6):
-    x = int(center[0] + radius * np.cos(j * 2 * np.pi / 6))
-    y = int(center[1] + radius * np.sin(j * 2 * np.pi / 6))
-    hex.append((x, y))
-
-pts_c = np.array(hex_c, np.int32)
-pts_c = pts_c.reshape((-1, 1, 2))
-color_c = (127, 127, 127)
-pts = np.array(hex, np.int32)
-pts = pts.reshape((-1, 1, 2))
-color = (0, 0, 0)
+# Define clearance zones
+def clearance(x, y, clearance):
+    clearance = clearance + robo_radius
+    Hex_center = (650, 250)
+    Xc, Yc = Hex_center
+    y = abs(y - canvas_height)
+    side_length = 150 
+    R = (np.cos(np.pi / 6) * side_length)  + clearance
+    clearance_zones = [
+        (x >= 100 - clearance and x <= 175 + clearance and y >= 100 - clearance and y <= 500 + clearance),
+        (x >= 275 - clearance and x <= 350 + clearance and y >= 0 - clearance and y <= 400 + clearance),
+        (x >= 900 - clearance and x <= 1100 + clearance and y >= 50 - clearance and y <= 125 + clearance),
+        (x >= 900 - clearance and x <= 1100 + clearance and y >= 375 - clearance and y <= 450 + clearance),
+        (x >= 1020 - clearance and x <= 1100 + clearance and y >= 50 - clearance and y <= 450 + clearance),
+        (x >= Xc - R and x <= Xc + R and y <= ((np.pi/6)*(x-(Xc-R)))+325 + clearance and y <= -((np.pi/6)*(x-(Xc+R)))+325 + clearance and y >= -((np.pi/6)*(x-(Xc-R)))+175 - clearance and y >= ((np.pi/6)*(x-(Xc+R)))+175 - clearance),
+        (x <= clearance or x >= canvas_width - clearance or y <= clearance or y >= canvas_height - clearance), # Add clearance to the edges of the canvas
+    ]
+    return any(clearance_zones)
 
 
-cv2.fillPoly(canvas, [pts_c], color_c)
-cv2.fillPoly(canvas, [pts], color)
-
-out = cv2.VideoWriter('A_star.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (canvas_width, canvas_height))
-
-def random_node_gen():
-    x = random.randint(0, canvas_width - 1)
-    y = random.randint(0, canvas_height - 1)
-    # y = abs(500 - y)
-    while not is_free(x, abs(500 - y)):
-        x = random.randint(0, canvas_width - 1)
-        y = random.randint(0, canvas_height - 1)
-        # y = abs(500 - y)
-    return (x, y)
-
-theta = 30
-step_size = 1
-
-def is_free(x, y):
-    return all(canvas[y, x] == free_space_color) or all(canvas[y, x] == (0, 255, 0)) or all(canvas[y, x] == (0, 0, 255))
-
-# def get_neighbors(node):
-#     x, y = node
-#     neighbors = []
-#     directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1)]
-#     for dx, dy in directions:
-#         nx, ny = x + dx, y + dy
-#         if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(nx, ny):
-#             if dx != 0 and dy != 0:
-#                 cost = 1.4 
-#             else:
-#                 cost = 1.0
-#             neighbors.append(((nx, ny), cost))
-#     return neighbors
+def is_free(x, y, theta):
+    theta_normalized = theta % 360
+    theta_index = theta_normalized // 30
+    if x >= 0 and x < canvas_width and y >= 0 and y < canvas_height:
+        if canvas_array[x, y, theta_index] == 0:
+            return True
+    else:
+        return False
 
 def get_neighbors(node):
-    x, y = node
-    neighbors = []
-    directions = [0, 1, 2 , 10, 11]
-    for th in directions:
-        rad = np.deg2rad(th*theta)
-        nx = x + (step_size * np.sin(rad))
-        ny = y + (step_size * np.cos(rad))
-        # ny = abs(500 - ny)
-        if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(int(nx), int(ny)):
-            cost = 1
-            neighbors.append(((int(nx), int(ny)), cost))
-    return neighbors
+    x, y , theta = node
+    neighbours = []
+    action_set = [theta, theta +30, theta -30, theta +60, theta -60]
+    for action in action_set:
+        x_new = x + step_size*np.sin(np.deg2rad(action))
+        y_new = y - step_size*np.cos(np.deg2rad(action))
+        x_new = int(round(x_new,0))
+        y_new = int(round(y_new,0))
+        if is_free(x_new, y_new, action):
+            cost = step_size
+            neighbours.append(((x_new, y_new, action), cost))
 
-# def get_neighbors(node):
-#     x, y = node
-#     neighbors = []
-#     # Define step sizes for movement: forward, backward, left, right
-#     step_sizes = [step_size, -step_size]
-#     # Define angular changes: straight, and potential turns
-#     angle_changes = [0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180]
+    return neighbours
 
-#     for step in step_sizes:
-#         for angle_change in angle_changes:
-#             rad = np.deg2rad(angle_change)  # Convert angle change to radians
-#             # Calculate new x and y based on angle and step size
-#             nx = x + step * np.sin(rad)
-#             ny = y + step * np.cos(rad)
-
-#             if 0 <= nx < canvas_width and 0 <= ny < canvas_height and is_free(int(nx), int(ny)):
-#                 cost = 1  # Assuming uniform cost for simplicity
-#                 neighbors.append(((int(nx), int(ny)), cost))
-
-#     return neighbors
-
-
-D = 1.0  
-D2 = 1.4 
-
-def octile_distance(x1, y1, x2, y2):
-    dx = abs(x1 - x2)
-    dy = abs(y1 - y2)
-    return D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
+def check_goal_reached(current_node, goal):
+    distance = ((current_node[0] - goal[0]) ** 2 + (current_node[1] - goal[1]) ** 2) ** 0.5
+    return distance < threshold and current_node[2] == goal[2]
 
 def a_star(start, goal):
     pq = PriorityQueue()
-    pq.put((0, start))
-    came_from = {start: None}
-    # cost_to_goal = octile_distance(start[0], start[1], goal[0], goal[1])
     cost_to_goal = ((goal[0] - start[0])**2 + (goal[1] - start[1])**2)**0.5
-    # cost_to_goal = abs(goal[0] - start[0]) + abs(goal[1] - start[1])
-    # cost_to_goal = 0
+    pq.put((cost_to_goal, (start, 0)))
+    came_from = {start: None}
     cost_so_far = {start: cost_to_goal}
     count =0
 
     while not pq.empty():
         current_cost, current_node = pq.get()
-        if current_node == goal:
-            print("Cost to Goal: " , cost_so_far[goal])
+        if check_goal_reached(current_node[0], goal):
+            print("Cost to Goal: " , cost_so_far[current_node[0]])
+            goal = current_node[0]
             print("Goal Reached")
-            cv2.destroyAllWindows()
+            return came_from, cost_so_far, goal
             break
-        for next_node, cost in get_neighbors(current_node):
-            cost_to_go = octile_distance(next_node[0], next_node[1], goal[0], goal[1])
-            # cost_to_go = ((goal[0] - next_node[0])**2 + (goal[1] - next_node[1])**2)**0.5
-            # cost_to_go = abs(goal[0] - next_node[0]) + abs(goal[1] - next_node[1])
-            new_cost = current_cost + cost + cost_to_go
+        for next_node, cost in get_neighbors(current_node[0]):
+            cost_to_go = ((goal[0] - next_node[0])**2 + (goal[1] - next_node[1])**2)**0.5
+            theta_normalized = next_node[2] % 360
+            theta_index = theta_normalized // 30
+            new_cost = current_node[1] + cost + cost_to_go
+            nc = current_node[1] + cost
             if next_node not in cost_so_far or new_cost < cost_so_far[next_node]:
-                cost_so_far[next_node] = new_cost
+                cost_so_far[next_node] = nc
                 priority = new_cost
-                pq.put((priority, next_node))
-                canvas[next_node[1], next_node[0]] = (255, 0, 0)
-                came_from[next_node] = current_node
+                pq.put((priority, (next_node, nc)))
+                cv2.arrowedLine(canvas, (current_node[0][0], current_node[0][1]), (next_node[0], next_node[1]), (255, 0, 0), 1)
+                canvas_array[next_node[0], next_node[1], int(theta_index)] = np.inf
+                came_from[next_node] = current_node[0]
                 count += 1
-                # cv2.imshow('A*', canvas)
-                # cv2.waitKey(1)
-                
-                # out.write(canvas)
-                if count%1200 == 0:
-                    cv2.imshow('A*', canvas)
-                    cv2.waitKey(1)
-                    
+                if count%3000 == 0:                    
                     out.write(canvas)
-    return came_from, cost_so_far
+    return None, None, None
 
 def reconstruct_path(came_from, start, goal):
+    # Start with the goal node and work backwards to the start
     current = goal
-    path = []
-    count = 0
+    path = [current]
     while current != start:
+        current = came_from[current]  # Move to the previous node in the path
         path.append(current)
-        cv2.circle(canvas, current, 2, (255, 255, 255), -1)
-        if count%30 == 0:
-            cv2.imshow('A*', canvas)
-            cv2.waitKey(1)            
-            out.write(canvas)
-        count += 1
-        current = came_from[current]
-    cv2.destroyAllWindows()
-    path.append(start)
-    path.reverse()
+
+    path.reverse()  # Reverse the path to go from start to goal
     return path
+
 
 def visualize_path(path):
     count = 0
-    for node in path:
-        x, y = node
-        cv2.circle(canvas, (x, y), 2, (0, 0, 255), -1) 
+    for i in range(len(path)-1):
+        x, y, t = path[i]
+        xn, yn, tn = path[i+1]
+        cv2.arrowedLine(canvas, (x, y), (xn,yn), (0, 0, 255), 2)
         count += 1
         if count%15 == 0:
-            cv2.imshow('A*', canvas)
-            cv2.waitKey(1)
             out.write(canvas)
     cv2.destroyAllWindows()       
     for i in range(30):
@@ -217,55 +149,100 @@ def visualize_path(path):
     cv2.imshow('Path', canvas)
     out.release()
 
-Xi = input("Enter the start node X: ")
-Yi = input("Enter the start node Y: ")
 
+while True:
+    print("Step size should be between 1 and 10")
+    step_size = input("Enter the step size: ")
+    step_size = int(step_size)
+    if step_size > 0 and step_size < 10:
+        break      
 
-Xg = input("Enter the goal node X: ")
-Yg = input("Enter the goal node Y: ")
-
-if not Xi.isdigit() or not Yi.isdigit() or not Xg.isdigit() or not Yg.isdigit():
-    print("Picking a Random Start and Goal Node")
-    start_node_er = random_node_gen()  
-    goal_node_er = random_node_gen()
+while True:
+    print("Clearance distance should be a positive number")
+    clearance_distance = input("Enter the clearance distance: ")
+    if clearance_distance.isdigit() and int(clearance_distance) > 0:
+        clearance_distance = int(clearance_distance)
+        break
     
-    print("Start Node: ", start_node_er)
-    print("Goal Node: ", goal_node_er)
-    start_node = (start_node_er[0], abs(500 - start_node_er[1]))
-    goal_node = (goal_node_er[0], abs(500 - goal_node_er[1]))
-else:
-    print("Start Node: ", (int(Xi), int(Yi)))
-    print("Goal Node: ", (int(Xg), int(Yg)))
-    Yi = abs(500 - int(Yi))
-    start_node = (int(Xi), int(Yi))
+while True:
+    print("Robot radius should be a positive number")
+    robo_radius = input("Enter the robot radius: ")
+    if robo_radius.isdigit() and int(robo_radius) > 0:
+        robo_radius = int(robo_radius)
+        break
 
-    Yg = abs(500 - int(Yg))
-    goal_node = (int(Xg), int(Yg))
+
+for x in range(canvas_width):
+    for y in range(canvas_height):
+        if clearance(x, y, clearance_distance):
+            canvas[y, x] = clearance_color
+        if obstacles((x, y)):
+            canvas[y, x] = obstacle_color
+
+canvas_array = np.zeros((canvas_width, canvas_height, 12))
+for x in range(canvas_width):
+    for y in range(canvas_height):
+        if all(canvas[y, x] != free_space_color):
+            canvas_array[x, y] = np.inf
+
+out = cv2.VideoWriter('A_star_old.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (canvas_width, canvas_height))
+
+C = clearance_distance + robo_radius + 1
+Xc = canvas_width - C
+Yc = canvas_height - C
+        
+while True:
+    print(f"\nThe start node and goal node should be within the canvas dimensions ({C}-{Xc}, {C}-{Yc}) and not inside an obstacle.\n")
+    Xi = input("Enter the start node X: ")
+    Yi = input("Enter the start node Y: ")
+    Ti = input("Enter the start node Angle: ")
+    Xi = int(Xi)
+    Yi = int(Yi)
+    Ti = int(Ti)
+    
+    if not (Xi < 0 or Xi >= canvas_width or Yi < 0 or Yi >= canvas_height):
+        if is_free(Xi, Yi, Ti):
+            break
+        else:
+            print("Start node is inside an obstacle")
+    else:
+        print("Start node is out of bounds.")
+
+
+
+while True:
+    Xg = input("Enter the goal node X: ")
+    Yg = input("Enter the goal node Y: ")
+    To = input("Enter the goal node Angle: ")
+    Xg = int(Xg)
+    Yg = int(Yg)
+    To = int(To)
+
+    if not (Xg < 0 or Xg >= canvas_width or Yg < 0 or Yg >= canvas_height):
+        if is_free(Xg, Yg, To):
+            
+            break
+        else:
+            print("Goal node is inside an obstacle")
+    else:
+        print("Goal node is inside an obstacle or out of bounds.")
+
+print("Start Node: ", (int(Xi), int(Yi), int(Ti)))
+print("Goal Node: ", (int(Xg), int(Yg), int(To)))
+
+Yi = abs(500 - int(Yi))
+start_node = (int(Xi), int(Yi), int(Ti))
+
+Yg = abs(500 - int(Yg))
+goal_node = (int(Xg), int(Yg), int(To))
 
 start_time = time.time()
-
-for j in  range(25):
-    out.write(canvas)
-
-
-
-if start_node[0] < 0 or start_node[0] >= canvas_width or start_node[1] < 0 or start_node[1] >= canvas_height:
-    print("Start node is out of bounds.")
-elif goal_node[0] < 0 or goal_node[0] >= canvas_width or goal_node[1] < 0 or goal_node[1] >= canvas_height:
-    print("Goal node is out of bounds.")
-elif not is_free(*start_node):
-    print("Start node is inside an obstacle.")
-elif not is_free(*goal_node):
-    print("Goal node is inside an obstacle.")
-else:
-    cv2.circle(canvas, start_node, 5, (0, 0, 255), -1)
-    cv2.circle(canvas, goal_node, 5, (0, 255, 0), -1)
-    
-    came_from, cost_so_far = a_star(start_node, goal_node)
-    cv2.imshow('A*', canvas)
-    cv2.waitKey(0)
-    path = reconstruct_path(came_from, start_node, goal_node)
-    visualize_path(path)
+came_from, cost_so_far, goal = a_star(start_node, goal_node)
+if came_from is None:
+    print("No path found")
+    exit()
+path = reconstruct_path(came_from, start_node, goal)
+visualize_path(path)
 
 end_time = time.time()
 execution_time = end_time - start_time
