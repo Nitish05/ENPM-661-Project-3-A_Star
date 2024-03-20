@@ -6,16 +6,26 @@ image = np.zeros((500, 500, 3), dtype="uint8")
 
 # Define the starting and ending points of the vector
 start_point = (100, 100)  # (x1, y1)
-end_point = (400, 400)    # (x2, y2)
+# end_point = (400, 400)    # (x2, y2)
 
 # Define the color of the arrow (BGR format) and the thickness
 color = (255, 0, 0)  # Blue color in BGR
 thickness = 2
 
-# Draw the vector as an arrowed line
-cv2.arrowedLine(image, start_point, end_point, color, thickness)
+x = 100
+y = 100
+while True:
+    angle = input("Enter the angle of the vector: ")
+    angle = int(angle)
+    angle = np.radians(angle)
 
-# Show the image
-cv2.imshow('Vector', image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    # Draw the vector as an arrowed line
+    xe = x + 50 * np.sin(angle)
+    ye = y - 50 * np.cos(angle)
+    end_point = (int(xe), int(ye))
+    cv2.arrowedLine(image, start_point, end_point, color, thickness)
+    cv2.imshow('Vector', image)
+    cv2.waitKey(0)
+    image = np.zeros((500, 500, 3), dtype="uint8")
+    cv2.destroyAllWindows()
+
