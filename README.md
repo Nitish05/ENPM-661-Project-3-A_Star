@@ -86,8 +86,8 @@ To use this code, you need to have Python installed on your system. You can down
     - The script should not take more than 5 minutes to find the path.
 
 ## Contributors
-Nitish Ravisankar Raveendran - 120385506\
-Pranav ANV - 1204886110
+Nitish Ravisankar Raveendran - rrnitish - 120385506\
+Pranav ANV - anvpran - 1204886110
 
 ## License
 
