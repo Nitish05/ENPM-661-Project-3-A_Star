@@ -1,9 +1,11 @@
+
+
 # Import necessary libraries
 import cv2
 import numpy as np
 from queue import PriorityQueue
 import time
-
+import random
 
 # Canvas dimensions
 canvas_height = 501
@@ -61,13 +63,10 @@ def is_free(x, y, theta):
     theta_normalized = theta % 360
     theta_index = theta_normalized // 30
     if x >= 0 and x < canvas_width and y >= 0 and y < canvas_height:
-        if canvas_array[x, y, theta_index] != np.inf:
+        if canvas_array[x, y, theta_index] == 0:
             return True
     else:
         return False
-    
-# def is_free_initial(x, y):
-#     return all(canvas[y, x] == free_space_color)   
 
 def get_neighbors(node):
     x, y , theta = node
@@ -85,13 +84,12 @@ def get_neighbors(node):
     return neighbours
 
 def check_goal_reached(current_node, goal):
-    # distance = ((current_node[0] - goal[0]) ** 2 + (current_node[1] - goal[1]) ** 2) ** 0.5
-    distance = canvas_array[current_node[0], current_node[1], 0]
+    distance = ((current_node[0] - goal[0]) ** 2 + (current_node[1] - goal[1]) ** 2) ** 0.5
     return distance < threshold and current_node[2] == goal[2]
 
 def a_star(start, goal):
     pq = PriorityQueue()
-    cost_to_goal = canvas_array[start[0], start[1], 0]
+    cost_to_goal = ((goal[0] - start[0])**2 + (goal[1] - start[1])**2)**0.5
     pq.put((cost_to_goal, (start, 0)))
     came_from = {start: None}
     cost_so_far = {start: cost_to_goal}
@@ -105,10 +103,10 @@ def a_star(start, goal):
             print("Goal Reached")
             return came_from, cost_so_far, goal
             break
-        for next_node, cost in get_neighbors(current_node[0]):        
+        for next_node, cost in get_neighbors(current_node[0]):
+            cost_to_go = ((goal[0] - next_node[0])**2 + (goal[1] - next_node[1])**2)**0.5
             theta_normalized = next_node[2] % 360
             theta_index = theta_normalized // 30
-            cost_to_go = canvas_array[next_node[0], next_node[1], 0]
             new_cost = current_node[1] + cost + cost_to_go
             nc = current_node[1] + cost
             if next_node not in cost_so_far or new_cost < cost_so_far[next_node]:
@@ -156,7 +154,7 @@ while True:
     print("Step size should be between 1 and 10")
     step_size = input("Enter the step size: ")
     step_size = int(step_size)
-    if step_size > 0 and step_size <= 10:
+    if step_size > 0 and step_size < 10:
         break      
 
 while True:
@@ -181,7 +179,13 @@ for x in range(canvas_width):
         if obstacles((x, y)):
             canvas[y, x] = obstacle_color
 
-out = cv2.VideoWriter('A_star.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (canvas_width, canvas_height))
+canvas_array = np.zeros((canvas_width, canvas_height, 12))
+for x in range(canvas_width):
+    for y in range(canvas_height):
+        if all(canvas[y, x] != free_space_color):
+            canvas_array[x, y] = np.inf
+
+out = cv2.VideoWriter('A_star_old.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (canvas_width, canvas_height))
 
 C = clearance_distance + robo_radius + 1
 Xc = canvas_width - C
@@ -197,12 +201,14 @@ while True:
     Ti = int(Ti)
     
     if not (Xi < 0 or Xi >= canvas_width or Yi < 0 or Yi >= canvas_height):
-        if all(canvas[Yi, Xi] == free_space_color):
+        if is_free(Xi, Yi, Ti):
             break
         else:
             print("Start node is inside an obstacle")
     else:
         print("Start node is out of bounds.")
+
+
 
 while True:
     Xg = input("Enter the goal node X: ")
@@ -213,7 +219,7 @@ while True:
     To = int(To)
 
     if not (Xg < 0 or Xg >= canvas_width or Yg < 0 or Yg >= canvas_height):
-        if all(canvas[Yg, Xg] == free_space_color):
+        if is_free(Xg, Yg, To):
             
             break
         else:
@@ -230,21 +236,10 @@ start_node = (int(Xi), int(Yi), int(Ti))
 Yg = abs(500 - int(Yg))
 goal_node = (int(Xg), int(Yg), int(To))
 
-canvas_array = np.zeros((canvas_width, canvas_height, 12))
-for x in range(canvas_width):
-    for y in range(canvas_height):
-        if all(canvas[y, x] != free_space_color):
-            canvas_array[x, y] = np.inf
-        else:
-            canvas_array[x, y] = ((Xg-x)**2 + (Yg-y)**2)**0.5
-
 start_time = time.time()
 came_from, cost_so_far, goal = a_star(start_node, goal_node)
 if came_from is None:
     print("No path found")
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print("Execution time: %.4f seconds" % execution_time)
     exit()
 path = reconstruct_path(came_from, start_node, goal)
 visualize_path(path)

@@ -20,8 +20,8 @@ while True:
     angle = np.radians(angle)
 
     # Draw the vector as an arrowed line
-    xe = x + 50 * np.sin(angle)
-    ye = y - 50 * np.cos(angle)
+    xe = x + 50 * np.cos(angle)
+    ye = y - 50 * np.sin(angle)
     end_point = (int(xe), int(ye))
     cv2.arrowedLine(image, start_point, end_point, color, thickness)
     cv2.imshow('Vector', image)
