@@ -257,6 +257,9 @@ for x in range(canvas_width):
 cv2.circle(canvas, (Xi, Yi), 2, (0, 0, 255), -1)
 cv2.circle(canvas, (Xg, Yg), 2, (0, 255, 0), -1)
 
+for j in range(30):
+    out.write(canvas)
+
 came_from, cost_so_far, goal = a_star(start_node, goal_node) # Run the A* algorithm
 
 if came_from is None:
@@ -267,6 +270,8 @@ if came_from is None:
     exit()
 path = reconstruct_path(came_from, start_node, goal)
 visualize_path(path)
+for i in range(30):
+    out.write(canvas)
 
 end_time = time.time()
 execution_time = end_time - start_time              # Calculate the execution time
