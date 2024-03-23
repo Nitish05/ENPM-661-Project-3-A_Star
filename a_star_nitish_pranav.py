@@ -215,7 +215,7 @@ while True:
     Yi = int(Yi)
     Ti = int(Ti)
     
-    if not (Xi < 0 or Xi >= canvas_width or Yi < 0 or Yi >= canvas_height):
+    if not (Xi < 0 or Xi >= canvas_width or Yi < 0 or Yi >= canvas_height):    # Check if the start node is within the canvas dimensions
         if is_free(Xi, Yi, Ti):
             break
         else:
@@ -233,9 +233,8 @@ while True:
     Yg = int(Yg)
     To = int(To)
 
-    if not (Xg < 0 or Xg >= canvas_width or Yg < 0 or Yg >= canvas_height):
-        if is_free(Xg, Yg, To):
-            
+    if not (Xg < 0 or Xg >= canvas_width or Yg < 0 or Yg >= canvas_height):    # Check if the goal node is within the canvas dimensions
+        if is_free(Xg, Yg, To): 
             break
         else:
             print("Goal node is inside an obstacle")
