@@ -93,7 +93,7 @@ def a_star(start, goal):
     pq.put((cost_to_goal, (start, 0)))
     came_from = {start: None}
     cost_so_far = {start: cost_to_goal}
-    count =0
+    count = 0
 
     while not pq.empty():
         current_cost, current_node = pq.get()

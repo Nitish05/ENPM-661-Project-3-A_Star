@@ -6,8 +6,8 @@ import time
 
 
 # Canvas dimensions
-canvas_height = 501
-canvas_width = 1201
+canvas_height = 500
+canvas_width = 1200
 
 # Define the colors
 clearance_color = (127, 127, 127)
@@ -85,6 +85,7 @@ def get_neighbors(node):
 # Function to check if the goal is reached
 def check_goal_reached(current_node, goal):
     distance = canvas_array[current_node[0], current_node[1], 0]
+    # distance = ((current_node[0] - goal[0])**2 + (current_node[1] - goal[1])**2)**0.5
     return distance < threshold and current_node[2] == goal[2]
 
 # A* algorithm
