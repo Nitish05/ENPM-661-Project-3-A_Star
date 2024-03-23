@@ -75,6 +75,7 @@ To use this code, you need to have Python installed on your system. You can down
     - The script will prompt the user to enter the start and goal coordinates as well as the orientation in the start and goal node. The origin (0,0) is at the bottom left corner of the grid space.
     - The orientation is such that 0 degrees is along the positive y-axis, 90 degrees is along the positive x-axis, 180 degrees is along the negative y-axis, and 270 degrees is along the negative x-axis. (Like a clock face or compass directions.)
     - The orientation should in 30 degrees increments. (0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330 ...)
+    - If the orientation is not in 30 degrees increments, the script will choose the nearest orientation in 30 degrees increments. eg: 127 will be rounded to 120.
     - If the start and goal coordinates are valid, the script will display the path from the start to the goal using the A* algorithm.
     - If the start and goal coordinates are invalid, the script will prompt the user to enter the coordinates again.
     - The script will also display the time taken to find the path and the cost of the path.

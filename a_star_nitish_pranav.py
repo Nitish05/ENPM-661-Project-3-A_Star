@@ -233,6 +233,11 @@ while True:
     else:
         print("Goal node is inside an obstacle or out of bounds.")
 
+Ti = Ti % 360
+Ti = round(Ti/30)*30                                          # Round the angle to the nearest multiple of 30
+To = To % 360
+To = round(To/30)*30                                          # Round the angle to the nearest multiple of 30
+
 print("Start Node: ", (int(Xi), int(Yi), int(Ti)))
 print("Goal Node: ", (int(Xg), int(Yg), int(To)))
 
